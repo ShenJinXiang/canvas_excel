@@ -1,0 +1,15 @@
+.qyGrid {
+	margin: 0px auto;
+	padding: 0px;
+	width: 90%;
+}
+.qyGrid .grid-container {
+	width: 100%;
+	height: 660px;
+	margin: 0px;
+	padding: 0px;
+}
+.qyGrid .grid-container .grid-main-canvas {
+	display: block;
+	border: 1px solid #ccc;
+}
