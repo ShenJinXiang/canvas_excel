@@ -320,17 +320,19 @@
 				var xy = getMouseXY(e);
 				var type = getAreaType(e);
 				if (_eventStatus.isDown && _eventStatus.currentType == 'scrollX') {
-					var diff = _eventStatus.lastPoint.x - xy.x;
+					var diff = xy.x - _eventStatus.lastPoint.x;
+					console.log('x diff: ', diff);
 					changeScroll('x', diff);
-					_eventStatus.lastPoint = {
-						x: xy.x,
-						y: xy.y
-					};
 				}
 				if (_eventStatus.isDown && _eventStatus.currentType == 'scrollY') {
-					var diff = _eventStatus.lastPoint.y - xy.y;
+					var diff = xy.y - _eventStatus.lastPoint.y;
+					console.log('y diff: ', diff);
 					changeScroll('y', diff);
 				}
+				_eventStatus.lastPoint = {
+					x: xy.x,
+					y: xy.y
+				};
 			});
 
 			_obj.$canvas.mouseup(function(e) {
@@ -347,7 +349,7 @@
 
 
 			function changeScroll(type, diff) {
-				console.log('type: ', type, ' diff: ', diff);
+				var winEXY = getWinEXY();
 				if (type == 'x') {
 					var winWidth = _obj.canvas.width - _option.rulerWidth;
 					if (_data.scrollY) {
@@ -356,7 +358,16 @@
 
 					var scrollWidth = _data.scrollX.ex - _data.scrollX.sx;
 					var gridDiff = diff * winWidth / scrollWidth;
-					_data.originX += gridDiff;
+					_data.originX -= gridDiff;
+
+					// 边界校验 
+					if (_data.originX <= winEXY.x - _data.cols[_data.cols.length - 1]) {
+						_data.originX = winEXY.x - _data.cols[_data.cols.length - 1];
+					}
+					if (_data.originX >= _option.rulerWidth) {
+						_data.originX = _option.rulerWidth;
+					}
+
 					draw();
 				}
 
@@ -368,7 +379,16 @@
 
 					var scrollHeight = _data.scrollY.ey - _data.scrollY.sy;
 					var gridDiff = diff * winHeight / scrollHeight;
-					_data.originY += gridDiff;
+					_data.originY -= gridDiff;
+
+					// 边界校验 
+					if (_data.originY <= winEXY.y - _data.rows[_data.rows.length - 1]) {
+						_data.originY = winEXY.y - _data.rows[_data.rows.length - 1];
+					}
+					if (_data.originY >= _option.rulerHeight) {
+						_data.originY = _option.rulerHeight;
+					}
+
 					draw();
 				}
 			}
@@ -384,14 +404,9 @@
 			if (x > 0 && x < _option.rulerWidth && y > _option.rulerHeight && y < _obj.canvas.height) {
 				return 'left-ruler';
 			}
-			var winEx = _obj.canvas.width;
-			var winEy = _obj.canvas.height;
-			if (_data.scrollY) {
-				winEx = _obj.canvas.width - _option.scrollWidth;
-			}
-			if (_data.scrollX) {
-				winEy = _obj.canvas.height - _option.scrollWidth;
-			}
+			var winEXY = getWinEXY();
+			var winEx = winEXY.x;
+			var winEy = winEXY.y;
 			if (x > _option.rulerWidth && x < winEx && y > _option.rulerHeight && y < winEy) {
 				return 'content';
 			}
@@ -405,6 +420,22 @@
 					return 'scrollY';
 				}
 			}
+
+		}
+
+		function getWinEXY() {
+			var winEx = _obj.canvas.width;
+			var winEy = _obj.canvas.height;
+			if (_data.scrollY) {
+				winEx = _obj.canvas.width - _option.scrollWidth;
+			}
+			if (_data.scrollX) {
+				winEy = _obj.canvas.height - _option.scrollWidth;
+			}
+			return {
+				x: winEx,
+				y: winEy
+			};
 		}
 
 		function getMouseXY(e) {
