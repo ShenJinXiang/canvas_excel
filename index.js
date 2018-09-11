@@ -183,6 +183,14 @@
 					_obj.ctx.fillText(txt, x, y);
 					_obj.ctx.restore();
 				}
+
+				// 绘制左标尺左上角区域，以及标尺底边和右边
+				_obj.ctx.save();
+				_obj.ctx.fillStyle = '#fafafa';
+				_obj.ctx.fillRect(0, 0, _option.rulerWidth, _option.rulerHeight);
+				_obj.ctx.restore();
+				drawLine(0, _option.rulerHeight, _obj.canvas.width, _option.rulerHeight, '#c3c3c3', 1);
+				drawLine(_option.rulerWidth, 0, _option.rulerWidth, _obj.canvas.height, '#c3c3c3', 1);
 			}
 
 			function drawScroll() {
@@ -346,8 +354,7 @@
 				_eventStatus.currentType = false;
 				_eventStatus.lastPoint = false;
 			});
-
-
+		
 			function changeScroll(type, diff) {
 				var winEXY = getWinEXY();
 				if (type == 'x') {
