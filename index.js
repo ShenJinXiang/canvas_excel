@@ -1,8 +1,8 @@
 (function() {
 	qyGrid({
 		el: 'grid',
-		rowNum: 50,
-		colNum: 10
+		rowNum: 100,
+		colNum: 50
 	});
 
 
@@ -354,6 +354,10 @@
 				_eventStatus.currentType = false;
 				_eventStatus.lastPoint = false;
 			});
+
+			_obj.$canvas.click(function(e) {
+				var cell = getCellByEvent(e);
+			});
 		
 			function changeScroll(type, diff) {
 				var winEXY = getWinEXY();
@@ -399,6 +403,7 @@
 					draw();
 				}
 			}
+
 		}
 
 		function getAreaType(e) {
@@ -457,6 +462,44 @@
 			};
 		}
 
+
+		/**
+		 * canvas坐标转换成文档坐标
+		 */
+		function canvasToDom(x, y) {
+			var _x = x - _data.originX;
+			var _y = y - _data.originY;
+			return {
+				x: _x,
+				y: _y
+			};
+		}
+
+		function getCellByDomXY(x, y) {
+			var _r, _c;
+			for (var r = 0; r < _data.rows.length - 1; r++) {
+				if (y > _data.rows[r] && y < _data.rows[r + 1]) {
+					_r = r;
+				}
+			}
+			for (var c = 0; c < _data.cols.length - 1; c++) {
+				if (x > _data.cols[c] & x < _data.cols[c + 1]) {
+					_c = c;
+				}
+			}
+			return _data.cells[_r][_c];
+		}
+
+		function getCellByEvent(e) {
+			var xy = getMouseXY(e);
+			var type = getAreaType(e);
+			if (type == 'content') {
+				var dxy = canvasToDom(xy.x, xy.y);
+				var cell = getCellByDomXY(dxy.x, dxy.y);
+				return cell;
+			}
+			return;
+		}
 
 	}
 })();
