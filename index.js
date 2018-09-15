@@ -17,6 +17,7 @@
 			rowHeight: 24,
 			colWidth: 120,
 			lineColor: '#c3c3c3',
+			currentLineColor: '#198764',
 			rulerWidth: 45,
 			rulerHeight: 25,
 			scrollWidth: 12
@@ -111,10 +112,15 @@
 			// 绘制表格直线
 			drawGridLine();
 
+			// 当前选择的区域
+			drawCurrentArea();
+
 			// 绘制左侧和顶部的标尺背景色
 			drawRulerBackGroundAndText();
 
+			// 滚动条
 			drawScroll();
+
 
 
 			/**
@@ -145,12 +151,21 @@
 			 * 绘制左侧和顶部的标尺背景色和文字
 			 */
 			function drawRulerBackGroundAndText() {
-				// 背景色
+				// 标尺背景色
 				_obj.ctx.save();
 				_obj.ctx.fillStyle = '#fafafa';
 				_obj.ctx.fillRect(0, 0, _obj.canvas.width, _option.rulerHeight);
 				_obj.ctx.fillRect(0, 0, _option.rulerWidth, _obj.canvas.height);
 				_obj.ctx.restore();
+
+				// 标尺顶部标尺的底边和左侧标尺的右边
+				drawLine(0, _option.rulerHeight, _obj.canvas.width, _option.rulerHeight, '#c3c3c3', 1);
+				drawLine(_option.rulerWidth, 0, _option.rulerWidth, _obj.canvas.height, '#c3c3c3', 1);
+				// 当前选择的单元格 在标尺上显示
+				if (_data.currentArea) {
+					drawLine(_data.originX + _data.currentArea.minX, _option.rulerHeight, _data.originX + _data.currentArea.maxX, _option.rulerHeight, _option.currentLineColor, 1);
+					drawLine(_option.rulerWidth, _data.originY + _data.currentArea.minY, _option.rulerWidth, _data.originY + _data.currentArea.maxY, _option.currentLineColor, 1);
+				}
 				
 				// 标尺文字
 				_obj.ctx.save();
@@ -171,6 +186,15 @@
 				}
 				_obj.ctx.restore();
 
+				// 绘制左标尺左上角区域，以及此区域边框
+				_obj.ctx.save();
+				_obj.ctx.fillStyle = '#fafafa';
+				_obj.ctx.fillRect(0, 0, _option.rulerWidth, _option.rulerHeight);
+				_obj.ctx.restore();
+				drawLine(0, _option.rulerHeight, _option.rulerWidth, _option.rulerHeight, '#c3c3c3', 1);
+				drawLine(_option.rulerWidth, 0, _option.rulerWidth, _option.rulerHeight, '#c3c3c3', 1);
+
+
 				/**
 				 * 绘制标尺文字
 				 */
@@ -184,13 +208,6 @@
 					_obj.ctx.restore();
 				}
 
-				// 绘制左标尺左上角区域，以及标尺底边和右边
-				_obj.ctx.save();
-				_obj.ctx.fillStyle = '#fafafa';
-				_obj.ctx.fillRect(0, 0, _option.rulerWidth, _option.rulerHeight);
-				_obj.ctx.restore();
-				drawLine(0, _option.rulerHeight, _obj.canvas.width, _option.rulerHeight, '#c3c3c3', 1);
-				drawLine(_option.rulerWidth, 0, _option.rulerWidth, _obj.canvas.height, '#c3c3c3', 1);
 			}
 
 			function drawScroll() {
@@ -279,6 +296,18 @@
 
 			}
 
+			function drawCurrentArea() {
+				if (_data.currentArea) {
+					_obj.ctx.save();
+					_obj.ctx.translate(_data.originX, _data.originY);
+					drawLine(_data.currentArea.minX, _data.currentArea.minY, _data.currentArea.maxX, _data.currentArea.minY, _option.currentLineColor, 1);
+					drawLine(_data.currentArea.minX, _data.currentArea.minY, _data.currentArea.minX, _data.currentArea.maxY, _option.currentLineColor, 1);
+					drawLine(_data.currentArea.minX, _data.currentArea.maxY, _data.currentArea.maxX, _data.currentArea.maxY, _option.currentLineColor, 1);
+					drawLine(_data.currentArea.maxX, _data.currentArea.minY, _data.currentArea.maxX, _data.currentArea.maxY, _option.currentLineColor, 1);
+					_obj.ctx.restore();
+				}
+			}
+
 
 			/**
 			 * 绘制直线
@@ -304,59 +333,133 @@
 		function bindEvent() {
 
 			_obj.$canvas.mousedown(function(e) {
-				var xy = getMouseXY(e);
 				var type = getAreaType(e);
+				_eventStatus.currentType = type;
 				if (type === 'scrollX') {
 					_eventStatus.isDown = true;
-					_eventStatus.currentType = type;
 					_eventStatus.lastPoint = {
-						x: xy.x,
-						y: xy.y
+						x: e.clientX,
+						y: e.clinetY
 					};
 				}
 				if (type == 'scrollY') {
 					_eventStatus.isDown = true;
-					_eventStatus.currentType = type;
 					_eventStatus.lastPoint = {
-						x: xy.x,
-						y: xy.y
+						x: e.clientX,
+						y: e.clientY
+					};
+				}
+				if (type == 'content' && !e.shiftKey) {
+					var cell = getCellByEvent(e);
+					_eventStatus.isDown = true;
+					_data.currentCells = [];
+					if (cell.isMerge) {
+						_data.currentCells.push(cell.keyCell);
+						_data.currentArea = {
+							minX: cell.keyCell.minX,
+							maxX: cell.keyCell.maxX,
+							minY: cell.keyCell.minY,
+							maxY: cell.keyCell.maxY
+						};
+					} else {
+						_data.currentCells.push(cell);
+						_data.currentArea = {
+							minX: cell.minX,
+							maxX: cell.maxX,
+							minY: cell.minY,
+							maxY: cell.maxY
+						};
+					}
+					draw();
+				}
+			});
+
+			$("body").mousemove(function(e) {
+				if (_eventStatus.isDown && _eventStatus.currentType == 'scrollX') {
+					var diff = e.clientX - _eventStatus.lastPoint.x;
+					changeScroll('x', diff);
+					_eventStatus.lastPoint = {
+						x: e.clientX,
+						y: e.clientY
+					};
+				}
+				if (_eventStatus.isDown && _eventStatus.currentType == 'scrollY') {
+					var diff = e.clientY - _eventStatus.lastPoint.y;
+					changeScroll('y', diff);
+					_eventStatus.lastPoint = {
+						x: e.clientX,
+						y: e.clientY
 					};
 				}
 			});
 
 			_obj.$canvas.mousemove(function(e) {
-				var xy = getMouseXY(e);
-				var type = getAreaType(e);
-				if (_eventStatus.isDown && _eventStatus.currentType == 'scrollX') {
-					var diff = xy.x - _eventStatus.lastPoint.x;
-					console.log('x diff: ', diff);
-					changeScroll('x', diff);
+				if (_eventStatus.isDown && _eventStatus.currentType == 'content') {
+					var cell = getCellByEvent(e);
+					if (!cell) {
+						return;
+					}
+					if (cell.isMerge) {
+						cell = cell.keyCell;
+					}
+					if (_data.currentCells && _data.currentCells[0] && _data.currentCells[0].id !== cell.id) {
+						var firstMinX = _data.currentCells[0].isMerge ? _data.currentCells[0].mergeMinX : _data.currentCells[0].minX;
+						var firstMaxX = _data.currentCells[0].isMerge ? _data.currentCells[0].mergeMaxX : _data.currentCells[0].maxX;
+						var firstMinY = _data.currentCells[0].isMerge ? _data.currentCells[0].mergeMinY : _data.currentCells[0].minY;
+						var firstMaxY = _data.currentCells[0].isMerge ? _data.currentCells[0].mergeMaxY : _data.currentCells[0].maxY;
+						var lastMinX = cell.isMerge ? cell.mergeMinX : cell.minX;
+						var lastMaxX = cell.isMerge ? cell.mergeMaxX : cell.maxX;
+						var lastMinY = cell.isMerge ? cell.mergeMinY : cell.minY;
+						var lastMaxY = cell.isMerge ? cell.mergeMaxY : cell.maxY;
+						_data.currentArea = {
+							minX: firstMinX < lastMinX ? firstMinX : lastMinX,
+							maxX: firstMaxX > lastMaxX ? firstMaxX : lastMaxX,
+							minY: firstMinY < lastMinY ? firstMinY : lastMinY,
+							maxY: firstMaxY > lastMaxY ? firstMaxY : lastMaxY
+						};
+					}
+
+					draw();
 				}
-				if (_eventStatus.isDown && _eventStatus.currentType == 'scrollY') {
-					var diff = xy.y - _eventStatus.lastPoint.y;
-					console.log('y diff: ', diff);
-					changeScroll('y', diff);
-				}
-				_eventStatus.lastPoint = {
-					x: xy.x,
-					y: xy.y
-				};
 			});
 
-			_obj.$canvas.mouseup(function(e) {
+			$("body").mouseup(function(e) {
 				_eventStatus.isDown = false;
 				_eventStatus.currentType = false;
 				_eventStatus.lastPoint = false;
 			});
 
-			_obj.$canvas.mouseout(function(e) {
-				_eventStatus.isDown = false;
-				_eventStatus.currentType = false;
-				_eventStatus.lastPoint = false;
+			$("body").mouseout(function(e) {
 			});
 
 			_obj.$canvas.click(function(e) {
-				var cell = getCellByEvent(e);
+				var type = getAreaType(e);
+				// 点击滚动条区域，移动滚动条
+				if (type == 'scrollX') {
+					var exy = getMouseXY(e);
+					if (exy.x > _data.scrollX.ex || exy.x < _data.scrollX.sx) {
+						changeScroll('x', exy.x - (_data.scrollX.sx + _data.scrollX.ex) / 2);
+					}
+				}
+				if (type == 'scrollY') {
+					var exy = getMouseXY(e);
+					if (exy.y > _data.scrollY.ey || exy.y < _data.scrollY.sy) {
+						changeScroll('y', exy.y - (_data.scrollY.sy + _data.scrollY.ey) / 2);
+					}
+				}
+				// 按住shift区域选择单元格
+				if (type == 'content' && e.shiftKey && _data.currentArea) {
+					var cell = getCellByEvent(e);
+					var minX = cell.isMerge ? cell.keyCell.mergeMinX : cell.minX;
+					var maxX = cell.isMerge ? cell.keyCell.mergeMaxX : cell.maxX;
+					var minY = cell.isMerge ? cell.keyCell.mergeMinY : cell.minY;
+					var maxY = cell.isMerge ? cell.keyCell.mergeMaxY : cell.maxY;
+					_data.currentArea.minX = (minX < _data.currentArea.minX) ? minX : _data.currentArea.minX;
+					_data.currentArea.maxX = (maxX > _data.currentArea.maxX) ? maxX : _data.currentArea.maxX;
+					_data.currentArea.minY = (minY < _data.currentArea.minY) ? minY : _data.currentArea.minY;
+					_data.currentArea.maxY = (maxY > _data.currentArea.maxY) ? maxY : _data.currentArea.maxY;
+					draw();
+				}
 			});
 		
 			function changeScroll(type, diff) {
@@ -405,6 +508,17 @@
 			}
 
 		}
+
+		// ----------------------------------------------------------
+		function checkCellSelect(cell) {
+			for (var i = 0; i < _data.currentCells.length; i++) {
+				if (_data.currentCells[i].id === cell.id) {
+					return true;
+				}
+			}
+			return false;
+		}
+		// ----------------------------------------------------------
 
 		function getAreaType(e) {
 			var point = getMouseXY(e);
@@ -478,13 +592,15 @@
 		function getCellByDomXY(x, y) {
 			var _r, _c;
 			for (var r = 0; r < _data.rows.length - 1; r++) {
-				if (y > _data.rows[r] && y < _data.rows[r + 1]) {
+				if (y >= _data.rows[r] && y < _data.rows[r + 1]) {
 					_r = r;
+					break;
 				}
 			}
 			for (var c = 0; c < _data.cols.length - 1; c++) {
-				if (x > _data.cols[c] & x < _data.cols[c + 1]) {
+				if (x >= _data.cols[c] && x < _data.cols[c + 1]) {
 					_c = c;
+					break;
 				}
 			}
 			return _data.cells[_r][_c];
