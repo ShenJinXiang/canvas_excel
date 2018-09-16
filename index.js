@@ -94,10 +94,10 @@
 					for (var c = 0; c < _option.colNum; c++) {
 						row.push({
 							id: 'R' + r + 'C' + c,
-							minX: c * _option.colWidth,
-							maxX: (c + 1) * _option.colWidth,
-							minY: r * _option.rowHeight,
-							maxY: (r + 1) * _option.rowHeight
+							minC: c,
+							maxC: c + 1,
+							minR: r,
+							maxR: r + 1
 						});
 					}
 					_data.cells.push(row);
@@ -163,8 +163,8 @@
 				drawLine(_option.rulerWidth, 0, _option.rulerWidth, _obj.canvas.height, '#c3c3c3', 1);
 				// 当前选择的单元格 在标尺上显示
 				if (_data.currentArea) {
-					drawLine(_data.originX + _data.currentArea.minX, _option.rulerHeight, _data.originX + _data.currentArea.maxX, _option.rulerHeight, _option.currentLineColor, 1);
-					drawLine(_option.rulerWidth, _data.originY + _data.currentArea.minY, _option.rulerWidth, _data.originY + _data.currentArea.maxY, _option.currentLineColor, 1);
+					drawLine(_data.originX + _data.cols[_data.currentArea.minC], _option.rulerHeight, _data.originX + _data.cols[_data.currentArea.maxC], _option.rulerHeight, _option.currentLineColor, 1);
+					drawLine(_option.rulerWidth, _data.originY + _data.rows[_data.currentArea.minR], _option.rulerWidth, _data.originY + _data.rows[_data.currentArea.maxR], _option.currentLineColor, 1);
 				}
 				
 				// 标尺文字
@@ -300,10 +300,10 @@
 				if (_data.currentArea) {
 					_obj.ctx.save();
 					_obj.ctx.translate(_data.originX, _data.originY);
-					drawLine(_data.currentArea.minX, _data.currentArea.minY, _data.currentArea.maxX, _data.currentArea.minY, _option.currentLineColor, 1);
-					drawLine(_data.currentArea.minX, _data.currentArea.minY, _data.currentArea.minX, _data.currentArea.maxY, _option.currentLineColor, 1);
-					drawLine(_data.currentArea.minX, _data.currentArea.maxY, _data.currentArea.maxX, _data.currentArea.maxY, _option.currentLineColor, 1);
-					drawLine(_data.currentArea.maxX, _data.currentArea.minY, _data.currentArea.maxX, _data.currentArea.maxY, _option.currentLineColor, 1);
+					drawLine(_data.cols[_data.currentArea.minC], _data.rows[_data.currentArea.minR], _data.cols[_data.currentArea.maxC], _data.rows[_data.currentArea.minR], _option.currentLineColor, 1);
+					drawLine(_data.cols[_data.currentArea.minC], _data.rows[_data.currentArea.minR], _data.cols[_data.currentArea.minC], _data.rows[_data.currentArea.maxR], _option.currentLineColor, 1);
+					drawLine(_data.cols[_data.currentArea.minC], _data.rows[_data.currentArea.maxR], _data.cols[_data.currentArea.maxC], _data.rows[_data.currentArea.maxR], _option.currentLineColor, 1);
+					drawLine(_data.cols[_data.currentArea.maxC], _data.rows[_data.currentArea.minR], _data.cols[_data.currentArea.maxC], _data.rows[_data.currentArea.maxR], _option.currentLineColor, 1);
 					_obj.ctx.restore();
 				}
 			}
@@ -336,90 +336,193 @@
 				var type = getAreaType(e);
 				_eventStatus.currentType = type;
 				if (type === 'scrollX') {
-					_eventStatus.isDown = true;
-					_eventStatus.lastPoint = {
-						x: e.clientX,
-						y: e.clinetY
-					};
+					(function() {
+						_eventStatus.isDown = true;
+						_eventStatus.lastPoint = {
+							x: e.clientX,
+							y: e.clinetY
+						};
+					})();
 				}
 				if (type == 'scrollY') {
-					_eventStatus.isDown = true;
-					_eventStatus.lastPoint = {
-						x: e.clientX,
-						y: e.clientY
-					};
+					(function() {
+						_eventStatus.isDown = true;
+						_eventStatus.lastPoint = {
+							x: e.clientX,
+							y: e.clientY
+						};
+					})();
 				}
 				if (type == 'content' && !e.shiftKey) {
-					var cell = getCellByEvent(e);
-					_eventStatus.isDown = true;
-					_data.currentCells = [];
-					if (cell.isMerge) {
-						_data.currentCells.push(cell.keyCell);
-						_data.currentArea = {
-							minX: cell.keyCell.minX,
-							maxX: cell.keyCell.maxX,
-							minY: cell.keyCell.minY,
-							maxY: cell.keyCell.maxY
-						};
-					} else {
-						_data.currentCells.push(cell);
-						_data.currentArea = {
-							minX: cell.minX,
-							maxX: cell.maxX,
-							minY: cell.minY,
-							maxY: cell.maxY
-						};
-					}
-					draw();
+					(function() {
+						var cell = getCellByEvent(e);
+						_eventStatus.isDown = true;
+						_data.currentCells = [];
+						if (cell.isMerge) {
+							_data.currentCells.push(cell.keyCell);
+							_data.currentArea = {
+								minC: cell.keyCell.minC,
+								maxC: cell.keyCell.maxC,
+								minR: cell.keyCell.minR,
+								maxR: cell.keyCell.maxR
+							};
+						} else {
+							_data.currentCells.push(cell);
+							_data.currentArea = {
+								minC: cell.minC,
+								maxC: cell.maxC,
+								minR: cell.minR,
+								maxR: cell.maxR
+							};
+						}
+						draw();
+					})();
 				}
+
+				if (type === 'top-ruler' && _eventStatus.colResize || type === 'left-ruler' && _eventStatus.rowResize) {
+					(function() {
+						_eventStatus.isDown = true;
+						_eventStatus.lastPoint = {
+							x: e.clientX,
+							y: e.clientY
+						};
+					})();
+				}
+
 			});
 
 			$("body").mousemove(function(e) {
 				if (_eventStatus.isDown && _eventStatus.currentType == 'scrollX') {
-					var diff = e.clientX - _eventStatus.lastPoint.x;
-					changeScroll('x', diff);
-					_eventStatus.lastPoint = {
-						x: e.clientX,
-						y: e.clientY
-					};
+					(function() {
+						var diff = e.clientX - _eventStatus.lastPoint.x;
+						changeScroll('x', diff);
+						_eventStatus.lastPoint = {
+							x: e.clientX,
+							y: e.clientY
+						};
+					})();
 				}
 				if (_eventStatus.isDown && _eventStatus.currentType == 'scrollY') {
-					var diff = e.clientY - _eventStatus.lastPoint.y;
-					changeScroll('y', diff);
-					_eventStatus.lastPoint = {
-						x: e.clientX,
-						y: e.clientY
-					};
+					(function() {
+						var diff = e.clientY - _eventStatus.lastPoint.y;
+						changeScroll('y', diff);
+						_eventStatus.lastPoint = {
+							x: e.clientX,
+							y: e.clientY
+						};
+					})();
 				}
+
+				if (_eventStatus.colResize && _eventStatus.isDown && _eventStatus.currentType == 'top-ruler') {
+					(function() {
+						var diff = e.clientX - _eventStatus.lastPoint.x;
+						changeColWidth(diff);
+						_eventStatus.lastPoint = {
+							x: e.clientX,
+							y: e.clientY
+						};
+					})();
+				} 
+
+				if (_eventStatus.rowResize && _eventStatus.isDown && _eventStatus.currentType == 'left-ruler') {
+					(function() {
+						var diff = e.clientY - _eventStatus.lastPoint.y;
+						changeRowHeight(diff);
+						_eventStatus.lastPoint = {
+							x: e.clientX,
+							y: e.clientY
+						};
+					})();
+				}
+
+
 			});
 
 			_obj.$canvas.mousemove(function(e) {
+				var type = getAreaType(e);
 				if (_eventStatus.isDown && _eventStatus.currentType == 'content') {
-					var cell = getCellByEvent(e);
-					if (!cell) {
-						return;
-					}
-					if (cell.isMerge) {
-						cell = cell.keyCell;
-					}
-					if (_data.currentCells && _data.currentCells[0] && _data.currentCells[0].id !== cell.id) {
-						var firstMinX = _data.currentCells[0].isMerge ? _data.currentCells[0].mergeMinX : _data.currentCells[0].minX;
-						var firstMaxX = _data.currentCells[0].isMerge ? _data.currentCells[0].mergeMaxX : _data.currentCells[0].maxX;
-						var firstMinY = _data.currentCells[0].isMerge ? _data.currentCells[0].mergeMinY : _data.currentCells[0].minY;
-						var firstMaxY = _data.currentCells[0].isMerge ? _data.currentCells[0].mergeMaxY : _data.currentCells[0].maxY;
-						var lastMinX = cell.isMerge ? cell.mergeMinX : cell.minX;
-						var lastMaxX = cell.isMerge ? cell.mergeMaxX : cell.maxX;
-						var lastMinY = cell.isMerge ? cell.mergeMinY : cell.minY;
-						var lastMaxY = cell.isMerge ? cell.mergeMaxY : cell.maxY;
-						_data.currentArea = {
-							minX: firstMinX < lastMinX ? firstMinX : lastMinX,
-							maxX: firstMaxX > lastMaxX ? firstMaxX : lastMaxX,
-							minY: firstMinY < lastMinY ? firstMinY : lastMinY,
-							maxY: firstMaxY > lastMaxY ? firstMaxY : lastMaxY
-						};
-					}
+					(function(){
+						var cell = getCellByEvent(e);
+						if (!cell) {
+							return;
+						}
+						if (cell.isMerge) {
+							cell = cell.keyCell;
+						}
+						if (_data.currentCells && _data.currentCells[0]) {
+							var firstMinC = _data.currentCells[0].isMerge ? _data.currentCells[0].mergeMinC : _data.currentCells[0].minC;
+							var firstMaxC = _data.currentCells[0].isMerge ? _data.currentCells[0].mergeMaxC : _data.currentCells[0].maxC;
+							var firstMinR = _data.currentCells[0].isMerge ? _data.currentCells[0].mergeMinR : _data.currentCells[0].minR;
+							var firstMaxR = _data.currentCells[0].isMerge ? _data.currentCells[0].mergeMaxR : _data.currentCells[0].maxR;
+							var lastMinC = cell.isMerge ? cell.mergeMinC : cell.minC;
+							var lastMaxC = cell.isMerge ? cell.mergeMaxC : cell.maxC;
+							var lastMinR = cell.isMerge ? cell.mergeMinR : cell.minR;
+							var lastMaxR = cell.isMerge ? cell.mergeMaxR : cell.maxR;
+							_data.currentArea = {
+								minC: firstMinC < lastMinC ? firstMinC : lastMinC,
+								maxC: firstMaxC > lastMaxC ? firstMaxC : lastMaxC,
+								minR: firstMinR < lastMinR ? firstMinR : lastMinR,
+								maxR: firstMaxR > lastMaxR ? firstMaxR : lastMaxR
+							};
+						}
 
-					draw();
+						draw();
+					})();
+				}
+
+				/**
+				 * 顶部标尺区，判断鼠标是否移动至竖线上，设置鼠标图标
+				 */
+				if (type == 'top-ruler' && !_eventStatus.isDown) {
+					(function() {
+						var exy = getMouseXY(e);
+						var currentCol;
+						for (var c = 1; c < _data.cols.length; c++) {
+							if (Math.abs(exy.x - _data.originX - _data.cols[c]) <= 5) {
+								currentCol = c;
+								break;
+							}
+						}
+						if (typeof currentCol !== 'undefined') {
+							_obj.$canvas.css('cursor', 'col-resize');
+							_eventStatus.colResize = currentCol;
+						} else {
+							_obj.$canvas.css('cursor', 'default');
+							delete _eventStatus.colResize;
+						}
+					})();
+				}
+
+				/**
+				 * 顶部标尺区，判断鼠标是否移动至横线上，设置鼠标图标
+				 */
+				if (type == 'left-ruler' && !_eventStatus.isDown) {
+					(function() {
+						var exy = getMouseXY(e);
+						var currentRow;
+						for (var r = 1; r < _data.rows.length; r++) {
+							if (Math.abs(exy.y - _data.originY - _data.rows[r]) <= 5) {
+								currentRow = r;
+								break;
+							}
+						}
+						if (typeof currentRow !== 'undefined') {
+							_obj.$canvas.css('cursor', 'row-resize');
+							_eventStatus.rowResize = currentRow;
+						} else {
+							_obj.$canvas.css('cursor', 'default');
+							delete _eventStatus.rowResize;
+						}
+					})();
+				}
+
+				/**
+				 * 不在标尺区域，且鼠标没按下，鼠标图标恢复默认
+				 */
+				if (type !== 'top-ruler' && type !== 'left-ruler' && !_eventStatus.isDown) {
+						_obj.$canvas.css('cursor', 'default');
+						delete _eventStatus.colResize;
+						delete _eventStatus.rowResize;
 				}
 			});
 
@@ -427,6 +530,10 @@
 				_eventStatus.isDown = false;
 				_eventStatus.currentType = false;
 				_eventStatus.lastPoint = false;
+
+				_obj.$canvas.css('cursor', 'default');
+				delete _eventStatus.colResize;
+				delete _eventStatus.rowResize;
 			});
 
 			$("body").mouseout(function(e) {
@@ -436,73 +543,111 @@
 				var type = getAreaType(e);
 				// 点击滚动条区域，移动滚动条
 				if (type == 'scrollX') {
-					var exy = getMouseXY(e);
-					if (exy.x > _data.scrollX.ex || exy.x < _data.scrollX.sx) {
-						changeScroll('x', exy.x - (_data.scrollX.sx + _data.scrollX.ex) / 2);
-					}
+					(function() {
+						var exy = getMouseXY(e);
+						if (exy.x > _data.scrollX.ex || exy.x < _data.scrollX.sx) {
+							changeScroll('x', exy.x - (_data.scrollX.sx + _data.scrollX.ex) / 2);
+						}
+					})();
 				}
 				if (type == 'scrollY') {
-					var exy = getMouseXY(e);
-					if (exy.y > _data.scrollY.ey || exy.y < _data.scrollY.sy) {
-						changeScroll('y', exy.y - (_data.scrollY.sy + _data.scrollY.ey) / 2);
-					}
+					(function() {
+						var exy = getMouseXY(e);
+						if (exy.y > _data.scrollY.ey || exy.y < _data.scrollY.sy) {
+							changeScroll('y', exy.y - (_data.scrollY.sy + _data.scrollY.ey) / 2);
+						}
+					})();
 				}
 				// 按住shift区域选择单元格
 				if (type == 'content' && e.shiftKey && _data.currentArea) {
-					var cell = getCellByEvent(e);
-					var minX = cell.isMerge ? cell.keyCell.mergeMinX : cell.minX;
-					var maxX = cell.isMerge ? cell.keyCell.mergeMaxX : cell.maxX;
-					var minY = cell.isMerge ? cell.keyCell.mergeMinY : cell.minY;
-					var maxY = cell.isMerge ? cell.keyCell.mergeMaxY : cell.maxY;
-					_data.currentArea.minX = (minX < _data.currentArea.minX) ? minX : _data.currentArea.minX;
-					_data.currentArea.maxX = (maxX > _data.currentArea.maxX) ? maxX : _data.currentArea.maxX;
-					_data.currentArea.minY = (minY < _data.currentArea.minY) ? minY : _data.currentArea.minY;
-					_data.currentArea.maxY = (maxY > _data.currentArea.maxY) ? maxY : _data.currentArea.maxY;
-					draw();
+					(function() {
+						var cell = getCellByEvent(e);
+						var minC = cell.isMerge ? cell.keyCell.mergeMinC : cell.minC;
+						var maxC = cell.isMerge ? cell.keyCell.mergeMaxC : cell.maxC;
+						var minR = cell.isMerge ? cell.keyCell.mergeMinR : cell.minR;
+						var maxR = cell.isMerge ? cell.keyCell.mergeMaxR : cell.maxR;
+						_data.currentArea.minC = (minC < _data.currentArea.minC) ? minC : _data.currentArea.minC;
+						_data.currentArea.maxC = (maxC > _data.currentArea.maxC) ? maxC : _data.currentArea.maxC;
+						_data.currentArea.minR = (minR < _data.currentArea.minR) ? minR : _data.currentArea.minR;
+						_data.currentArea.maxR = (maxR > _data.currentArea.maxR) ? maxR : _data.currentArea.maxR;
+						draw();
+					})();
 				}
 			});
 		
 			function changeScroll(type, diff) {
 				var winEXY = getWinEXY();
 				if (type == 'x') {
-					var winWidth = _obj.canvas.width - _option.rulerWidth;
-					if (_data.scrollY) {
-						winWidth = winWidth - _option.scrollWidth;
-					}
+					(function() {
+						var winWidth = _obj.canvas.width - _option.rulerWidth;
+						if (_data.scrollY) {
+							winWidth = winWidth - _option.scrollWidth;
+						}
 
-					var scrollWidth = _data.scrollX.ex - _data.scrollX.sx;
-					var gridDiff = diff * winWidth / scrollWidth;
-					_data.originX -= gridDiff;
+						var scrollWidth = _data.scrollX.ex - _data.scrollX.sx;
+						var gridDiff = diff * winWidth / scrollWidth;
+						_data.originX -= gridDiff;
 
-					// 边界校验 
-					if (_data.originX <= winEXY.x - _data.cols[_data.cols.length - 1]) {
-						_data.originX = winEXY.x - _data.cols[_data.cols.length - 1];
-					}
-					if (_data.originX >= _option.rulerWidth) {
-						_data.originX = _option.rulerWidth;
-					}
+						// 边界校验 
+						if (_data.originX <= winEXY.x - _data.cols[_data.cols.length - 1]) {
+							_data.originX = winEXY.x - _data.cols[_data.cols.length - 1];
+						}
+						if (_data.originX >= _option.rulerWidth) {
+							_data.originX = _option.rulerWidth;
+						}
 
-					draw();
+						draw();
+					})();
 				}
 
 				if (type == 'y') {
-					var winHeight = _obj.canvas.height - _option.rulerHeight;
-					if (_data.scrollX) {
-						winHeight = winHeight - _option.scrollWidth;
-					}
+					(function() {
+						var winHeight = _obj.canvas.height - _option.rulerHeight;
+						if (_data.scrollX) {
+							winHeight = winHeight - _option.scrollWidth;
+						}
 
-					var scrollHeight = _data.scrollY.ey - _data.scrollY.sy;
-					var gridDiff = diff * winHeight / scrollHeight;
-					_data.originY -= gridDiff;
+						var scrollHeight = _data.scrollY.ey - _data.scrollY.sy;
+						var gridDiff = diff * winHeight / scrollHeight;
+						_data.originY -= gridDiff;
 
-					// 边界校验 
-					if (_data.originY <= winEXY.y - _data.rows[_data.rows.length - 1]) {
-						_data.originY = winEXY.y - _data.rows[_data.rows.length - 1];
-					}
-					if (_data.originY >= _option.rulerHeight) {
-						_data.originY = _option.rulerHeight;
-					}
+						// 边界校验 
+						if (_data.originY <= winEXY.y - _data.rows[_data.rows.length - 1]) {
+							_data.originY = winEXY.y - _data.rows[_data.rows.length - 1];
+						}
+						if (_data.originY >= _option.rulerHeight) {
+							_data.originY = _option.rulerHeight;
+						}
 
+						draw();
+					})();
+				}
+			}
+
+			/**
+			 * 改变列宽
+			 */
+			function changeColWidth(diff) {
+				if (_eventStatus.colResize) {
+					for(var c = 0; c < _data.cols.length; c++) {
+						if (c >= _eventStatus.colResize) {
+							_data.cols[c] += diff;
+						}
+					}
+					draw();
+				}
+			}
+
+			/**
+			 * 改变行高
+			 */
+			function changeRowHeight(diff) {
+				if (_eventStatus.rowResize) {
+					for (var r = 0; r < _data.rows.length; r++) {
+						if (r >= _eventStatus.rowResize) {
+							_data.rows[r] += diff;
+						}
+					}
 					draw();
 				}
 			}
