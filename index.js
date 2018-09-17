@@ -54,9 +54,21 @@
 
 			function initObj() {
 				var $el = $('#' + _option.el);
+				$el.addClass('qyGrid');
+
+				// 添加操作栏
+				var $btnContainer = $('<div class="btn-container"></div>');
+				var $mergeBtn = $('<button class="btn defalut">合并</button>');
+				var $splitBtn = $('<button class="btn defalut">拆分</button>');
+				$btnContainer.append($mergeBtn);
+				$btnContainer.append($splitBtn);
+
+
+				// 添加canvas
 				var $canvasContainer = $('<div class="grid-container"></div>');
 				var $canvas = $('<canvas class="grid-main-canvas"></canvas>');
 				$canvasContainer.append($canvas);
+				$el.append($btnContainer);
 				$el.append($canvasContainer);
 
 				var canvas = $canvas[0];
@@ -70,6 +82,8 @@
 					$canvas: $canvas,
 					canvas: canvas,
 					ctx: ctx,
+					$mergeBtn: $mergeBtn,
+					$splitBtn: $splitBtn
 				};
 			}
 
