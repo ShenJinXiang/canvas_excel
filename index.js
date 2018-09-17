@@ -16,6 +16,8 @@
 			colNum: option.colNum || 20,
 			rowHeight: 24,
 			colWidth: 120,
+			minRowHeight: 15,
+			minColWidth: 20,
 			lineColor: '#c3c3c3',
 			currentLineColor: '#198764',
 			rulerWidth: 45,
@@ -478,7 +480,7 @@
 						var exy = getMouseXY(e);
 						var currentCol;
 						for (var c = 1; c < _data.cols.length; c++) {
-							if (Math.abs(exy.x - _data.originX - _data.cols[c]) <= 5) {
+							if (Math.abs(exy.x - _data.originX - _data.cols[c]) <= 2) {
 								currentCol = c;
 								break;
 							}
@@ -501,7 +503,7 @@
 						var exy = getMouseXY(e);
 						var currentRow;
 						for (var r = 1; r < _data.rows.length; r++) {
-							if (Math.abs(exy.y - _data.originY - _data.rows[r]) <= 5) {
+							if (Math.abs(exy.y - _data.originY - _data.rows[r]) <= 3) {
 								currentRow = r;
 								break;
 							}
@@ -629,9 +631,11 @@
 			 */
 			function changeColWidth(diff) {
 				if (_eventStatus.colResize) {
-					for(var c = 0; c < _data.cols.length; c++) {
-						if (c >= _eventStatus.colResize) {
-							_data.cols[c] += diff;
+					if (_data.cols[_eventStatus.colResize - 1] + _option.minColWidth < _data.cols[_eventStatus.colResize] + diff) {
+						for(var c = 0; c < _data.cols.length; c++) {
+							if (c >= _eventStatus.colResize) {
+								_data.cols[c] += diff;
+							}
 						}
 					}
 					draw();
@@ -643,9 +647,11 @@
 			 */
 			function changeRowHeight(diff) {
 				if (_eventStatus.rowResize) {
-					for (var r = 0; r < _data.rows.length; r++) {
-						if (r >= _eventStatus.rowResize) {
-							_data.rows[r] += diff;
+					if (_data.rows[_eventStatus.rowResize - 1] + _option.minRowHeight < _data.rows[_eventStatus.rowResize] + diff) {
+						for (var r = 0; r < _data.rows.length; r++) {
+							if (r >= _eventStatus.rowResize) {
+								_data.rows[r] += diff;
+							}
 						}
 					}
 					draw();
