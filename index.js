@@ -161,6 +161,30 @@
 					drawLine(_data.cols[c], 0, _data.cols[c], _data.rows[_data.rows.length - 1], _option.lineColor, 1);
 				}
 				_obj.ctx.restore();
+
+				drawMergeLine();
+
+				function drawMergeLine() {
+					_data.cells.forEach(function(row) {
+						row.forEach(function(cell) {
+							if(cell.isMergeKey) {
+								var minX = _data.cols[cell.mergeMinC];
+								var maxX = _data.cols[cell.mergeMaxC];
+								var minY = _data.rows[cell.mergeMinR];
+								var maxY = _data.rows[cell.mergeMaxR];
+
+								_obj.ctx.save();
+								_obj.ctx.translate(_data.originX, _data.originY);
+								_obj.ctx.clearRect(minX, minY, maxX - minX, maxY - minY);
+								drawLine(minX, minY, maxX, minY, _option.lineColor, 1);
+								drawLine(maxX, minY, maxX, maxY, _option.lineColor, 1);
+								drawLine(maxX, maxY, minX, maxY, _option.lineColor, 1);
+								drawLine(minX, maxY, minX, minY, _option.lineColor, 1);
+								_obj.ctx.restore();
+							}
+						});
+					});
+				}
 			}
 
 			/**
@@ -590,6 +614,45 @@
 					})();
 				}
 			});
+
+			/**
+			 * 合并单元格
+			 */
+			_obj.$mergeBtn.click(function() {
+				var cells = getCellsByCurrentArea();
+				if (cells && cells.length > 1) {
+					cells.forEach(function(item) {
+						item.isMerge = true;
+						item.mergeMinC = _data.currentArea.minC;
+						item.mergeMaxC = _data.currentArea.maxC;
+						item.mergeMinR = _data.currentArea.minR;
+						item.mergeMaxR = _data.currentArea.maxR;
+						item.keyCell = _data.cells[_data.currentArea.minR][_data.currentArea.minC];
+						item.isMergeKey = false;
+					});
+					_data.cells[_data.currentArea.minR][_data.currentArea.minC].isMergeKey = true;
+					draw();
+				}
+			});
+
+			/**
+			 * 拆分单元格
+			 */
+			_obj.$splitBtn.click(function() {
+			});
+
+			function getCellsByCurrentArea() {
+				if (!_data.currentArea) {
+					return false;
+				}
+				var cells = [];
+				for (var r = _data.currentArea.minR; r < _data.currentArea.maxR; r++) {
+					for (var c = _data.currentArea.minC; c < _data.currentArea.maxC; c++) {
+						cells.push(_data.cells[r][c]);
+					}
+				}
+				return cells;
+			}
 		
 			function changeScroll(type, diff) {
 				var winEXY = getWinEXY();
