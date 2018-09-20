@@ -415,6 +415,7 @@
 								maxR: cell.maxR
 							};
 						}
+						formatCurrentArea();
 						draw();
 					})();
 				}
@@ -504,6 +505,7 @@
 								minR: firstMinR < lastMinR ? firstMinR : lastMinR,
 								maxR: firstMaxR > lastMaxR ? firstMaxR : lastMaxR
 							};
+							formatCurrentArea();
 						}
 
 						draw();
@@ -747,6 +749,40 @@
 			return false;
 		}
 		// ----------------------------------------------------------
+		//
+
+		function formatCurrentArea() {
+			if (_data.currentArea) {
+				debugger
+				var minR = _data.currentArea.minR;
+				var maxR = _data.currentArea.maxR;
+				var minC = _data.currentArea.minC;
+				var maxC = _data.currentArea.maxC;
+
+				for (var r = _data.currentArea.minR; r < _data.currentArea.maxR; r++) {
+					for (var c = _data.currentArea.minC; c < _data.currentArea.maxC; c++) {
+						var cell = _data.cells[r][c];
+						if (cell.isMerge) {
+							minR = (minR < cell.mergeMinR) ? minR : cell.mergeMinR;
+							maxR = (maxR > cell.mergeMaxR) ? maxR : cell.mergeMaxR;
+							minC = (minC < cell.mergeMinC) ? minC : cell.mergeMinC;
+							maxC = (maxC > cell.mergeMaxC) ? maxC : cell.mergeMaxC;
+						} else {
+							minR = (minR < cell.minR) ? minR : cell.minR;
+							maxR = (maxR > cell.maxR) ? maxR : cell.maxR;
+							minC = (minC < cell.minC) ? minC : cell.minC;
+							maxC = (maxC > cell.maxC) ? maxC : cell.maxC;
+						}
+					}
+				}
+				_data.currentArea = {
+					minR : minR,
+					maxR : maxR,
+					minC : minC,
+					maxC : maxC
+				};
+			}
+		}
 
 		function getAreaType(e) {
 			var point = getMouseXY(e);
