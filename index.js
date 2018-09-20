@@ -641,6 +641,19 @@
 			 * 拆分单元格
 			 */
 			_obj.$splitBtn.click(function() {
+				var cells = getCellsByCurrentArea();
+				if (cells && cells.length > 1) {
+					cells.forEach(function(item) {
+						delete item.isMerge;
+						delete item.mergeMinC;
+						delete item.mergeMaxC;
+						delete item.mergeMinR;
+						delete item.mergeMaxR;
+						delete item.keyCell;
+						delete item.isMergeKey;
+					});
+					draw();
+				}
 			});
 
 			function getCellsByCurrentArea() {
